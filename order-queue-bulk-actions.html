@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Order Queue Bulk Actions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap">
+<style>
+/* Layout: faux POS screen behind a centered incoming-order modal; the modal swaps between
+   one order's detail and a queue view where bulk Accept / Decline live. Light-only, like the POS. */
+:root {
+  color-scheme: light;
+  --bg: #e9ebed;
+  --pos-surface: #ffffff;
+  --pos-line: #d5d9dd;
+  --ink: #1d1f21;
+  --ink-2: #5b6166;
+  --ink-3: #8a9096;
+  --brand: #1b7ba2;
+  --brand-tint: #e3f0f6;
+  --header: #3e3a38;
+  --header-2: #55504d;
+  --panel: #f1f1f0;
+  --card: #ffffff;
+  --line: #e3e4e5;
+  --go: #267a14;
+  --go-hover: #1f6610;
+  --stop: #c8322a;
+  --stop-tint: #fdecea;
+  --warn: #b35c00;
+  --warn-tint: #fff1e0;
+  --doordash: #eb1700;
+  --ubereats: #0e7a3c;
+  --online: #1b7ba2;
+  --scrim: rgba(40, 42, 44, .45);
+  --font: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --mono: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; font-family: var(--font); font-size: 14px; color: var(--ink);
+  background: var(--bg); overflow: hidden;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- demo bar ---------- */
+.demobar {
+  position: fixed; inset: 0 0 auto 0; z-index: 50; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 6px max(16px, env(safe-area-inset-left, 0px));
+  background: var(--ink); color: #fff; font-size: 12px;
+}
+.demobar b { font-weight: 500; letter-spacing: .04em; text-transform: uppercase; opacity: .7; }
+.seg { display: inline-flex; border: 1px solid #555; border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 5px 10px; color: #ddd; }
+.seg button[aria-pressed="true"] { background: #fff; color: var(--ink); }
+.demobar .spacer { flex: 1; }
+.demobar .reset { background: transparent; border: 1px solid #666; border-radius: 6px; padding: 5px 10px; color: #fff; }
+
+/* ---------- faux POS background ---------- */
+.pos { position: absolute; inset: 36px 0 0 0; display: grid; grid-template-rows: auto auto 1fr auto; background: var(--pos-surface); }
+.pos-top { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--pos-line); }
+.pos-top h1 { margin: 0; font-size: 20px; font-weight: 500; flex: 1; }
+.pos-top .bell { position: relative; width: 36px; height: 36px; border: 1px solid var(--pos-line); border-radius: 6px; display: grid; place-items: center; }
+.pos-top .bell span { position: absolute; top: -6px; right: -6px; background: var(--brand); color: #fff; border-radius: 10px; font-size: 11px; padding: 1px 6px; }
+.pos-tabs { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--pos-line); overflow: hidden; }
+.pos-tabs span { padding: 8px 12px; border: 1px solid var(--pos-line); border-radius: 4px; font-size: 12px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+.pos-tabs span.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.pos-main { display: grid; grid-template-columns: 1fr 210px; min-height: 0; }
+.pos-table { border-right: 1px solid var(--pos-line); }
+.pos-table .th { height: 40px; background: var(--brand); }
+.pos-drivers { padding: 12px; display: grid; align-content: start; gap: 8px; font-size: 12px; }
+.pos-drivers h3 { margin: 0 0 4px; font-size: 13px; }
+.pos-drivers div { border: 1px solid var(--pos-line); border-radius: 6px; padding: 8px; }
+.pos-bottom { display: flex; justify-content: space-around; padding: 10px 8px; border-top: 1px solid var(--pos-line); font-size: 11px; font-weight: 500; color: var(--ink-2); overflow: hidden; gap: 8px; }
+.empty { position: absolute; inset: 36px 0 0 0; display: grid; place-items: center; z-index: 5; pointer-events: none; }
+.empty div { pointer-events: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 24px 28px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+.empty h2 { margin: 0 0 6px; font-size: 18px; font-weight: 500; }
+.empty p { margin: 0 0 16px; color: var(--ink-2); }
+
+/* ---------- modal ---------- */
+.scrim { position: absolute; inset: 36px 0 0 0; background: var(--scrim); z-index: 10; display: grid; place-items: center;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal {
+  position: relative; width: min(860px, 100%); max-height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--panel); border-radius: 14px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.mhead { background: var(--header); color: #fff; display: flex; align-items: center; gap: 16px; padding: 14px 20px 14px 24px; }
+.mhead .titles { flex: 1; min-width: 0; }
+.mhead h2 { margin: 0; font-size: 22px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qpill {
+  margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px;
+  background: var(--header-2); border: 1px solid #6c6662; color: #fff; font-size: 13px; font-weight: 500;
+}
+.qpill:hover { background: #645e5a; }
+.qpill .dot { width: 8px; height: 8px; border-radius: 50%; background: #ffb347; }
+.qpill svg { transition: transform .15s; }
+.qpill[aria-expanded="true"] svg { transform: rotate(180deg); }
+.qtext { margin-top: 4px; font-size: 14px; color: #ddd; }
+.timer { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #e6e6e6; text-align: right; }
+.ring { position: relative; width: 52px; height: 52px; flex: none; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 500; color: #fff; }
+.iconbtn { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #6c6662; background: var(--header-2); color: #fff; display: grid; place-items: center; flex: none; }
+.iconbtn:hover { background: #645e5a; }
+.menuwrap { position: relative; }
+.menu { position: absolute; right: 0; top: 46px; z-index: 30; min-width: 220px; background: var(--card); color: var(--ink); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.25); padding: 6px; }
+.menu button { display: flex; width: 100%; justify-content: space-between; gap: 12px; border: 0; background: transparent; padding: 11px 12px; border-radius: 6px; text-align: left; font-size: 14px; }
+.menu button:hover { background: var(--panel); }
+.menu .danger { color: var(--stop); }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+
+.mbody { overflow: auto; padding: 18px 20px 4px; display: grid; gap: 16px; align-content: start; }
+.ordhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ordicon { width: 40px; height: 40px; border-radius: 8px; background: var(--card); display: grid; place-items: center; flex: none; }
+.ordhead .meta { flex: 1; min-width: 220px; }
+.ordhead .line1 { display: flex; align-items: center; gap: 8px; font-size: 20px; flex-wrap: wrap; }
+.ordhead .line2 { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.paid { font-size: 22px; color: var(--go); }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; color: #fff; font-size: 13px; font-weight: 500; line-height: 1.5; }
+.badge.sm { font-size: 11px; padding: 1px 8px; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.card { background: var(--card); border-radius: 8px; min-width: 0; }
+.card h3 { margin: 0; padding: 12px 12px 10px; font-size: 14px; font-weight: 500; border-bottom: 1px solid var(--line); }
+.items { max-height: 260px; overflow: auto; }
+.item { display: flex; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.item .q { width: 12px; }
+.item .n { flex: 1; }
+.item small { display: block; color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+.totals { padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; color: var(--ink-2); font-size: 13px; }
+.totals .t { color: var(--ink); font-weight: 500; }
+.rightcol { display: grid; gap: 12px; align-content: start; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { min-width: 70px; padding: 10px 12px; border-radius: 6px; border: 1px solid #c9cdd1; background: var(--card); font-size: 13px; }
+.chip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.prep { padding: 10px 12px 12px; display: grid; gap: 12px; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #c9cdd1; background: var(--card); font-size: 20px; }
+.stepper output { min-width: 80px; text-align: center; font-size: 20px; }
+.ready { margin-left: auto; text-align: right; font-size: 18px; }
+.ready small { display: block; font-size: 12px; color: var(--ink-2); }
+.cust { padding: 10px 12px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; }
+.cust .lbl { color: var(--ink-2); margin-top: 6px; }
+
+/* queue view */
+.qbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.qbar label { display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; }
+.qbar .sum { color: var(--ink-2); }
+.qbar .sort { margin-left: auto; color: var(--ink-3); font-size: 12px; }
+input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--brand); margin: 0; }
+.qlist { list-style: none; margin: 0; padding: 0; background: var(--card); border-radius: 8px; }
+.qrow { display: grid; grid-template-columns: auto 1fr auto auto auto; align-items: center; gap: 14px; padding: 12px; border-bottom: 1px solid var(--line); }
+.qrow:last-child { border-bottom: 0; }
+.qrow.off { opacity: .55; }
+.qrow .who { min-width: 0; }
+.qrow .who b { font-weight: 500; font-size: 15px; }
+.qrow .who .sub { display: flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 12px; margin-top: 3px; flex-wrap: wrap; }
+.qrow .cur { font-size: 11px; color: var(--brand); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+.left { font-family: var(--mono); font-size: 13px; padding: 4px 8px; border-radius: 6px; background: var(--panel); min-width: 62px; text-align: center; }
+.left.urgent { background: var(--stop-tint); color: var(--stop); }
+.left.soon { background: var(--warn-tint); color: var(--warn); }
+.linkbtn { border: 0; background: transparent; color: var(--brand); font-weight: 500; padding: 6px 4px; }
+.batch { background: var(--card); border-radius: 8px; padding: 12px; display: grid; gap: 10px; }
+.batch .h { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-weight: 500; }
+.batch .h span { font-weight: 400; color: var(--ink-2); font-size: 13px; }
+
+/* footer */
+.mfoot { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px 20px; }
+.big { height: 68px; border-radius: 8px; font-size: 20px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.big.no { background: var(--card); border: 1px solid #c3c7cb; }
+.big.no:hover { background: #fafafa; }
+.big.yes { background: var(--go); border: 1px solid var(--go); color: #fff; }
+.big.yes:hover { background: var(--go-hover); }
+.big.bulk-no { color: var(--stop); border-color: #e3b4b0; }
+.big:disabled { opacity: .45; cursor: not-allowed; }
+.big .n { font-size: 15px; opacity: .85; }
+
+/* confirmation sheet */
+.sheetwrap { position: absolute; inset: 0; background: rgba(30,30,30,.45); display: grid; align-items: end; z-index: 20; }
+.sheet { background: var(--card); border-radius: 14px 14px 0 0; padding: 20px 24px 22px; display: grid; gap: 14px; max-height: 92%; overflow: auto; }
+.sheet h3 { margin: 0; font-size: 20px; font-weight: 500; }
+.sheet p { margin: 0; color: var(--ink-2); line-height: 1.45; }
+.sum-list { border: 1px solid var(--line); border-radius: 8px; }
+.sum-list div { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; padding: 9px 12px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.sum-list div:last-child { border-bottom: 0; }
+.sum-list .muted { color: var(--ink-2); }
+.sum-list .tot { font-weight: 500; background: var(--panel); }
+.reasons .chip[aria-pressed="true"] { background: var(--stop); border-color: var(--stop); }
+.sheet .acts { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; }
+.sheet .acts .big { height: 56px; font-size: 17px; }
+.big.danger { background: var(--stop); border: 1px solid var(--stop); color: #fff; }
+
+/* toast */
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
+  background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 8px; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.3); max-width: calc(100% - 32px); }
+
+@media (max-width: 760px) {
+  .cols, .cust { grid-template-columns: 1fr; }
+  .pos-main { grid-template-columns: 1fr; }
+  .pos-drivers { display: none; }
+  .mhead { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+  .mhead h2 { font-size: 18px; }
+  .timer .lbl { display: none; }
+  .mbody { padding: 14px 14px 4px; }
+  .mfoot { padding: 12px 14px 14px; }
+  .big { height: 56px; font-size: 17px; }
+  .qrow { grid-template-columns: auto 1fr auto; }
+  .qrow .tot, .qrow .linkbtn { display: none; }
+  .sheet .acts { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="demobar">
+  <b>Mockup</b>
+  <span>Bulk actions placement:</span>
+  <div class="seg" role="group" aria-label="Variant">
+    <button id="varA" data-action="variant" data-v="A" aria-pressed="true">A · Queue view</button>
+    <button id="varB" data-action="variant" data-v="B" aria-pressed="false">B · Overflow menu</button>
+  </div>
+  <span class="spacer"></span>
+  <button id="resetBtn" class="reset" data-action="reset">Reset demo</button>
+</div>
+
+<div class="pos" aria-hidden="true">
+  <div class="pos-top">
+    <h1>All Orders</h1>
+    <div class="bell">🔔<span id="bellCount">4</span></div>
+    <strong style="font-size:13px">Mike J.</strong>
+  </div>
+  <div class="pos-tabs"><span class="on">OPEN</span><span>OUT</span><span>COMPLETE</span><span>FUTURE</span><span>Assigned</span><span>Unassigned</span><span>Delivery</span></div>
+  <div class="pos-main">
+    <div class="pos-table"><div class="th"></div></div>
+    <div class="pos-drivers">
+      <h3>Active Drivers</h3>
+      <div><b>Marta L.</b><br>3 assigned</div>
+      <div><b>Casey B.</b><br>1 assigned</div>
+      <div><b>Felix S.</b><br>3 of 5 delivered</div>
+      <div><b>Xavi H.</b><br>4 of 5 delivered</div>
+    </div>
+  </div>
+  <div class="pos-bottom"><span>ADD</span><span>EDIT</span><span>RUNNER</span><span>REQUEST DRIVER</span><span>DEPARTURE</span><span>CANCEL ORDER</span><span>PAY CHECK</span><span>PRINT</span></div>
+</div>
+
+<div id="empty" class="empty" hidden>
+  <div>
+    <h2>No orders waiting</h2>
+    <p>New orders will pop up here as they arrive.</p>
+    <button class="big no" style="height:44px;font-size:14px;padding:0 18px" data-action="reset">Reset demo</button>
+  </div>
+</div>
+
+<div id="scrim" class="scrim">
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle"></div>
+</div>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+const ICON = {
+  delivery: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.5 17h7M14 7h2l3 7.5M3.5 14.5 5 10h6l2 4.5"/></svg>',
+  pickup: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
+  chev: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  minus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  more: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  x: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  check: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+  pin: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>',
+};
+const PLATFORM = {
+  DoorDash: 'var(--doordash)', 'Uber Eats': 'var(--ubereats)', Online: 'var(--online)'
+};
+const ORDERS = [
+  { id: 'cf4a4ffe5', name: 'Jordan Lee', type: 'Delivery', when: 'ASAP', platform: 'DoorDash', left: 780, received: '9:00 am',
+    phone: '239-395-5984', addr: ['0001 Tamiami Trail', 'Fort Myers, Fl 33958'], prep: 20,
+    items: [[2,'Angus cheese burger',25.95],[1,'Mushroom burger',12.99],[1,'BBQ chicken pizza',28.85,['Extra cheese','Extra chicken']],
+            [2,'Angus cheese burger',25.95],[1,'Mushroom burger',12.99],[1,'BBQ chicken pizza',28.85,['Extra cheese','Extra chicken']],[1,'Mushroom burger',12.99]],
+    count: 12, subtotal: 100.00, tax: 5.52, total: 105.52 },
+  { id: 'a71e02bc9', name: 'Sam Ortiz', type: 'Pickup', when: 'ASAP', platform: 'Online', left: 702, received: '9:02 am',
+    phone: '239-555-0142', addr: null, prep: 15,
+    items: [[1,'Mushroom burger',12.99],[1,'Truffle fries',6.50],[1,'Lemonade',4.95]],
+    count: 3, subtotal: 24.44, tax: 3.96, total: 28.40 },
+  { id: '5d09f7a13', name: 'Priya Nair', type: 'Delivery', when: 'ASAP', platform: 'Uber Eats', left: 555, received: '9:05 am',
+    phone: '239-555-0187', addr: ['412 Del Prado Blvd', 'Cape Coral, Fl 33990'], prep: 30,
+    items: [[1,'BBQ chicken pizza',28.85,['Extra cheese']],[2,'Garden salad',17.90],[2,'Iced tea',7.90]],
+    count: 5, subtotal: 54.65, tax: 6.45, total: 61.10 },
+  { id: '9be44c0d2', name: 'Ken Walsh', type: 'Delivery', when: 'ASAP', platform: 'DoorDash', left: 243, received: '9:11 am',
+    phone: '239-555-0119', addr: ['78 Periwinkle Way', 'Sanibel, Fl 33957'], prep: 15,
+    items: [[1,'Angus cheese burger',12.98],[1,'Truffle fries',5.50]],
+    count: 2, subtotal: 18.48, tax: 1.37, total: 19.85 },
+];
+const PREPS = [15, 20, 30, 45, 60];
+const REASONS = ['Too busy', 'Item unavailable', 'Closing soon', 'Can’t deliver there'];
+const CLOCK0 = new Date(2026, 0, 12, 9, 15, 0).getTime();
+const TOTAL_WINDOW = 900;
+
+let S = { variant: 'A' };
+let elapsed = 0;
+
+function reset() {
+  S = {
+    variant: S.variant,
+    orders: ORDERS.map(o => ({ ...o })),
+    currentId: ORDERS[0].id,
+    view: 'detail',
+    selected: new Set(ORDERS.map(o => o.id)),
+    batchPrep: 'each',
+    sheet: null,
+    reason: null,
+    menu: false,
+  };
+  elapsed = 0;
+  render();
+}
+
+const $ = s => document.querySelector(s);
+const money = n => '$' + n.toFixed(2);
+const mmss = s => { s = Math.max(0, s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function clockPlus(min) {
+  const d = new Date(CLOCK0 + (elapsed + min * 60) * 1000);
+  let h = d.getHours(); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12;
+  return h + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ap;
+}
+const cur = () => S.orders.find(o => o.id === S.currentId) || S.orders[0];
+const bySoonest = () => [...S.orders].sort((a, b) => a.left - b.left);
+const selectedOrders = () => S.orders.filter(o => S.selected.has(o.id));
+const prepFor = o => S.batchPrep === 'each' ? o.prep : S.batchPrep;
+const leftClass = s => s < 300 ? 'urgent' : s < 600 ? 'soon' : '';
+const badge = (p, sm) => `<span class="badge${sm ? ' sm' : ''}" style="background:${PLATFORM[p]}">${p === 'Online' ? 'Linga Online' : p}</span>`;
+const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+
+function ring(secs) {
+  const r = 22, c = 2 * Math.PI * r, frac = Math.max(0, secs) / TOTAL_WINDOW;
+  return `<div class="ring"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="${r}" fill="none" stroke="#6c6662" stroke-width="3"/>
+    <circle id="ringArc" cx="26" cy="26" r="${r}" fill="none" stroke="#e5352b" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - frac)}"/></svg><span id="ringText" class="num">${mmss(secs)}</span></div>`;
+}
+
+function render() {
+  const modal = $('#modal');
+  const n = S.orders.length;
+  $('#bellCount').textContent = n;
+  $('#varA').setAttribute('aria-pressed', S.variant === 'A');
+  $('#varB').setAttribute('aria-pressed', S.variant === 'B');
+  $('#scrim').hidden = n === 0;
+  $('#empty').hidden = n !== 0;
+  if (!n) { modal.innerHTML = ''; return; }
+  if (S.variant === 'B' && S.view === 'queue') S.view = 'detail';
+
+  const o = cur();
+  const queue = S.view === 'queue';
+  const others = n - 1;
+  const ringSecs = queue ? bySoonest()[0].left : o.left;
+
+  let head = `<div class="mhead"><div class="titles">`;
+  if (queue) {
+    head += `<h2 id="mtitle">${plural(n, 'order')} waiting</h2>`;
+  } else {
+    head += `<h2 id="mtitle">New order · ${o.name}</h2>`;
+  }
+  if (S.variant === 'A' && n > 1) {
+    head += `<button class="qpill" data-action="toggleQueue" aria-expanded="${queue}">
+      <span class="dot"></span>${queue ? 'Back to ' + o.name : '+' + plural(others, 'more order') + ' waiting · View all'} ${ICON.chev}</button>`;
+  } else if (n > 1) {
+    head += `<div class="qtext">+${plural(others, 'more order')} waiting</div>`;
+  }
+  head += `</div>
+    <div class="timer"><span class="lbl">${queue ? 'Next auto-decline' : 'Auto-declines in'}</span>${ring(ringSecs)}</div>`;
+  if (S.variant === 'B' && n > 1) {
+    head += `<div class="menuwrap"><button class="iconbtn" data-action="menu" aria-label="More actions" aria-expanded="${S.menu}">${ICON.more}</button>
+      ${S.menu ? `<div class="menu" role="menu">
+        <button role="menuitem" data-action="bulk" data-kind="accept"><span>Accept all…</span><span class="num">${n}</span></button>
+        <button role="menuitem" class="danger" data-action="bulk" data-kind="decline"><span>Decline all…</span><span class="num">${n}</span></button>
+        <hr><button role="menuitem" data-action="next"><span>Skip to next order</span></button>
+      </div>` : ''}</div>`;
+  }
+  head += `<button class="iconbtn" aria-label="Minimize">${ICON.minus}</button></div>`;
+
+  const body = queue ? queueBody() : detailBody(o);
+
+  let foot;
+  if (queue) {
+    const k = S.selected.size, all = k === n;
+    foot = `<div class="mfoot">
+      <button class="big no bulk-no" data-action="sheet" data-kind="decline" ${k ? '' : 'disabled'}>${ICON.x} ${all ? 'Decline all' : 'Decline'} <span class="n num">(${k})</span></button>
+      <button class="big yes" data-action="sheet" data-kind="accept" ${k ? '' : 'disabled'}>${ICON.check} ${all ? 'Accept all' : 'Accept'} <span class="n num">(${k})</span></button>
+    </div>`;
+  } else {
+    foot = `<div class="mfoot">
+      <button class="big no" data-action="declineOne">${ICON.x} Decline</button>
+      <button class="big yes" data-action="acceptOne">${ICON.check} Accept</button>
+    </div>`;
+  }
+
+  modal.innerHTML = head + body + foot + (S.sheet ? sheet() : '');
+}
+
+function detailBody(o) {
+  const items = o.items.map(([q, nm, p, mods]) => `<div class="item"><span class="q">${q}</span>
+    <span class="n">${nm}${mods ? mods.map(m => `<small>${m}</small>`).join('') : ''}</span><span class="num">${money(p)}</span></div>`).join('');
+  return `<div class="mbody">
+    <div class="ordhead">
+      <div class="ordicon">${o.type === 'Pickup' ? ICON.pickup : ICON.delivery}</div>
+      <div class="meta">
+        <div class="line1">${o.type} · ${o.when} ${badge(o.platform)}</div>
+        <div class="line2">Order 466-001-${o.id} · Received ${o.received}, Jan 12 26</div>
+      </div>
+      <div class="paid num">Paid · ${money(o.total)}</div>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <h3>${o.count} Items</h3>
+        <div class="items">${items}</div>
+        <div class="totals num"><span>Subtotal</span><span>${money(o.subtotal)}</span><span>Tax</span><span>${money(o.tax)}</span>
+          <span class="t">Total</span><span class="t">${money(o.total)}</span></div>
+      </div>
+      <div class="rightcol">
+        <div class="card">
+          <h3>Prep time</h3>
+          <div class="prep">
+            <div class="chips">${PREPS.map(p => `<button class="chip" data-action="prep" data-p="${p}" aria-pressed="${o.prep === p}">${p} Min</button>`).join('')}</div>
+            <div class="stepper">
+              <button data-action="step" data-d="-5" aria-label="Less prep time">−</button>
+              <output class="num">${o.prep} Min</output>
+              <button data-action="step" data-d="5" aria-label="More prep time">+</button>
+              <div class="ready num">Ready <span data-ready="${o.prep}">${clockPlus(o.prep)}</span><small>if accepted now</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Customer</h3>
+          <div class="cust">
+            <div>${o.name}<br>${o.phone}<div class="lbl">Customer notes:</div>None</div>
+            <div style="display:flex;gap:8px">${o.addr ? ICON.pin + '<span>' + o.addr.join('<br>') + '</span>' : '<span class="lbl" style="margin:0">Pickup at counter</span>'}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function queueBody() {
+  const list = bySoonest();
+  const sel = selectedOrders();
+  const n = S.orders.length;
+  const allOn = sel.length === n;
+  const rows = list.map(o => {
+    const on = S.selected.has(o.id);
+    return `<li class="qrow${on ? '' : ' off'}">
+      <input type="checkbox" id="sel-${o.id}" data-action="sel" data-id="${o.id}" ${on ? 'checked' : ''} aria-label="Select ${o.name}">
+      <label class="who" for="sel-${o.id}">
+        <b>${o.name}</b> ${o.id === S.currentId ? '<span class="cur">· Showing</span>' : ''}
+        <div class="sub">${o.type} · ${badge(o.platform, true)} · ${plural(o.count, 'item')} · prep ${prepFor(o)} min</div>
+      </label>
+      <span class="tot num">${money(o.total)}</span>
+      <span class="left num ${leftClass(o.left)}" data-left="${o.id}" title="Time until auto-decline">${mmss(o.left)}</span>
+      <button class="linkbtn" data-action="open" data-id="${o.id}">Open</button>
+    </li>`;
+  }).join('');
+  const sum = sel.reduce((a, o) => a + o.total, 0);
+  return `<div class="mbody">
+    <div class="qbar">
+      <label><input type="checkbox" id="selAll" data-action="selAll" ${allOn ? 'checked' : ''}> Select all</label>
+      <span class="sum num">${sel.length} of ${n} selected · ${money(sum)}</span>
+      <span class="sort">Sorted by time left</span>
+    </div>
+    <ul class="qlist">${rows}</ul>
+    <div class="batch">
+      <div class="h">Prep time for accepted orders <span>Applies when you tap Accept</span></div>
+      <div class="chips">
+        <button class="chip" data-action="batchPrep" data-p="each" aria-pressed="${S.batchPrep === 'each'}">Each order’s default</button>
+        ${PREPS.map(p => `<button class="chip" data-action="batchPrep" data-p="${p}" aria-pressed="${S.batchPrep === p}">${p} Min</button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function sheet() {
+  const sel = S.sheetOrders.map(id => S.orders.find(o => o.id === id)).filter(Boolean);
+  const k = sel.length;
+  const sum = sel.reduce((a, o) => a + o.total, 0);
+  if (S.sheet === 'accept') {
+    const rows = sel.map(o => `<div><span>${o.name} <span class="muted">· ${o.platform === 'Online' ? 'Linga Online' : o.platform}</span></span>
+      <span class="muted num">${prepFor(o)} min</span><span class="num">Ready ${clockPlus(prepFor(o))}</span></div>`).join('');
+    return `<div class="sheetwrap" data-action="closeSheet"><div class="sheet" role="alertdialog" aria-labelledby="shTitle" data-stop>
+      <h3 id="shTitle">Accept ${plural(k, 'order')}?</h3>
+      <p>Tickets print to the kitchen and each platform is told when the order will be ready.</p>
+      <div class="sum-list">${rows}<div class="tot"><span>Total</span><span></span><span class="num">${money(sum)}</span></div></div>
+      <div class="acts">
+        <button class="big no" data-action="closeSheet">Back</button>
+        <button class="big yes" data-action="confirmAccept">${ICON.check} Accept ${plural(k, 'order')}</button>
+      </div></div></div>`;
+  }
+  const rows = sel.map(o => `<div><span>${o.name} <span class="muted">· ${o.platform === 'Online' ? 'Linga Online' : o.platform}</span></span>
+    <span class="muted">${plural(o.count, 'item')}</span><span class="num">${money(o.total)}</span></div>`).join('');
+  return `<div class="sheetwrap" data-action="closeSheet"><div class="sheet" role="alertdialog" aria-labelledby="shTitle" data-stop>
+    <h3 id="shTitle">Decline ${plural(k, 'order')} · ${money(sum)}?</h3>
+    <p>Customers are notified and refunded by each platform. This can’t be undone.</p>
+    <div class="sum-list">${rows}</div>
+    <div>
+      <div style="font-weight:500;margin-bottom:8px">Reason (sent to the platforms)</div>
+      <div class="chips reasons">${REASONS.map(r => `<button class="chip" data-action="reason" data-r="${r}" aria-pressed="${S.reason === r}">${r}</button>`).join('')}</div>
+    </div>
+    <div class="acts">
+      <button class="big no" data-action="closeSheet">Keep orders</button>
+      <button class="big danger" data-action="confirmDecline" ${S.reason ? '' : 'disabled'}>${ICON.x} Decline ${plural(k, 'order')}</button>
+    </div></div></div>`;
+}
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3200);
+}
+
+function removeOrders(ids) {
+  S.orders = S.orders.filter(o => !ids.includes(o.id));
+  ids.forEach(id => S.selected.delete(id));
+  if (!S.orders.find(o => o.id === S.currentId) && S.orders.length) S.currentId = S.orders[0].id;
+  if (S.orders.length < 2) S.view = 'detail';
+}
+
+function openSheet(kind, ids) {
+  S.sheet = kind; S.sheetOrders = ids; S.reason = null; S.menu = false; render();
+  setTimeout(() => { const b = document.querySelector('.sheet .acts .big:last-child'); if (b && !b.disabled) b.focus(); else document.querySelector('.sheet .acts .big')?.focus(); }, 0);
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (S.menu && !e.target.closest('.menuwrap')) { S.menu = false; render(); if (!el) return; }
+  if (!el) return;
+  if (el.dataset.action === 'closeSheet' && e.target.closest('[data-stop]') && el.classList.contains('sheetwrap')) return;
+  const a = el.dataset.action, o = cur();
+  switch (a) {
+    case 'reset': reset(); break;
+    case 'variant': S.variant = el.dataset.v; S.view = 'detail'; S.menu = false; S.sheet = null; render(); break;
+    case 'toggleQueue': S.view = S.view === 'queue' ? 'detail' : 'queue'; render(); break;
+    case 'menu': S.menu = !S.menu; render(); break;
+    case 'next': { const i = S.orders.indexOf(o); S.currentId = S.orders[(i + 1) % S.orders.length].id; S.menu = false; render(); break; }
+    case 'open': S.currentId = el.dataset.id; S.view = 'detail'; render(); break;
+    case 'prep': o.prep = +el.dataset.p; render(); break;
+    case 'step': o.prep = Math.min(120, Math.max(5, o.prep + +el.dataset.d)); render(); break;
+    case 'batchPrep': S.batchPrep = el.dataset.p === 'each' ? 'each' : +el.dataset.p; render(); break;
+    case 'sel': el.checked ? S.selected.add(el.dataset.id) : S.selected.delete(el.dataset.id); render(); $('#sel-' + el.dataset.id)?.focus(); break;
+    case 'selAll': S.selected = el.checked ? new Set(S.orders.map(x => x.id)) : new Set(); render(); $('#selAll')?.focus(); break;
+    case 'sheet': openSheet(el.dataset.kind, selectedOrders().map(x => x.id)); break;
+    case 'bulk': S.batchPrep = 'each'; openSheet(el.dataset.kind, S.orders.map(x => x.id)); break;
+    case 'closeSheet': S.sheet = null; render(); break;
+    case 'reason': S.reason = el.dataset.r; render(); break;
+    case 'acceptOne': removeOrders([o.id]); toast(`Accepted ${o.name}. Ready ${clockPlus(o.prep)}.`); render(); break;
+    case 'declineOne': removeOrders([o.id]); toast(`Declined ${o.name}.`); render(); break;
+    case 'confirmAccept': { const k = S.sheetOrders.length; removeOrders(S.sheetOrders); S.sheet = null; toast(`Accepted ${plural(k, 'order')}. Tickets sent to the kitchen.`); render(); break; }
+    case 'confirmDecline': { const k = S.sheetOrders.length; removeOrders(S.sheetOrders); S.sheet = null; toast(`Declined ${plural(k, 'order')} · “${S.reason}”.`); render(); break; }
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (S.sheet) { S.sheet = null; render(); }
+    else if (S.menu) { S.menu = false; render(); }
+  }
+});
+window.addEventListener('resize', () => render());
+
+setInterval(() => {
+  if (!S.orders.length) return;
+  elapsed++;
+  S.orders.forEach(o => o.left--);
+  const expired = S.orders.filter(o => o.left <= 0);
+  if (expired.length) {
+    if (S.sheetOrders) S.sheetOrders = S.sheetOrders.filter(id => !expired.some(x => x.id === id));
+    removeOrders(expired.map(x => x.id));
+    toast(`${expired.map(x => x.name).join(', ')} auto-declined.`);
+    if (S.sheet && !S.sheetOrders.length) S.sheet = null;
+    render(); return;
+  }
+  document.querySelectorAll('[data-left]').forEach(el => {
+    const o = S.orders.find(x => x.id === el.dataset.left);
+    el.textContent = mmss(o.left); el.className = 'left num ' + leftClass(o.left);
+  });
+  const secs = S.view === 'queue' ? bySoonest()[0].left : cur().left;
+  const arc = $('#ringArc'), txt = $('#ringText');
+  if (arc) { const c = 2 * Math.PI * 22; arc.setAttribute('stroke-dashoffset', c * (1 - Math.max(0, secs) / TOTAL_WINDOW)); }
+  if (txt) txt.textContent = mmss(secs);
+  if (elapsed % 60 === 0) document.querySelectorAll('[data-ready]').forEach(el => el.textContent = clockPlus(+el.dataset.ready));
+}, 1000);
+
+reset();
+</script>
+</body>
+</html>
