@@ -168,14 +168,16 @@ function CopyToggleBtn({label,onClick,full}){
   );
 }
 // Page headline for the processing application, then the current step.
-function StepEyebrow({step,total,label}){
-  return o.default.createElement("div",{className:"flex flex-col",style:{gap:"20px"}},
+function StepEyebrow({step,total}){
+  return o.default.createElement("div",{className:"flex flex-col",style:{gap:"16px"}},
     o.default.createElement("h1",{className:"text-[28px] leading-[34px] font-bold",style:{fontFamily:S,color:q.headings,margin:0}},"New processing account"),
-    o.default.createElement("div",{className:"flex flex-col gap-1"},
-      o.default.createElement("span",{className:"text-[13px] font-bold",style:{fontFamily:S,color:q.action,display:"block"}},`Step ${step} of ${total}`),
-      o.default.createElement("h2",{style:{fontFamily:S,color:q.headings,fontSize:"20px",lineHeight:"26px",fontWeight:600,margin:0}},label)
-    )
+    o.default.createElement("span",{style:{fontFamily:S,fontSize:"16px",lineHeight:"20px",fontWeight:600,color:q.action,display:"block"}},`Step ${step} of ${total}`)
   );
+}
+function FormCard({title,action,children}){
+  return o.default.createElement("div",{"data-form-card":title,className:"w-full bg-white flex flex-col",style:{borderRadius:"16px",padding:"20px",gap:"16px"}},
+    o.default.createElement("div",{className:"flex items-center justify-between",style:{gap:"8px",minHeight:"17px"}},o.default.createElement("span",{style:{fontFamily:S,fontSize:"14px",lineHeight:"17px",fontWeight:700,color:q.body}},title),action||null),
+    children);
 }
 function SectionLabel({children}){
   return o.default.createElement("div",{className:"text-[14px] font-semibold pb-2",style:{fontFamily:S,color:q.headings,borderBottom:`1px solid ${q.borderDefault}`}},children);
@@ -183,9 +185,9 @@ function SectionLabel({children}){
 function UploadRow({label,fileName,onFile,onRemove,required:req}){
   let inputRef=(0,o.useRef)(null);
   if(fileName){
-    return o.default.createElement("div",{className:"flex items-center gap-3 rounded-[10px] px-4",style:{height:"56px",border:`1px solid ${q.borderInput}`,backgroundColor:q.page}},
+    return o.default.createElement("div",{className:"flex items-center gap-3 px-4",style:{height:"56px",borderRadius:"12px",backgroundColor:q.bg}},
       o.default.createElement(FileIco,{size:18,color:q.tertiary}),
-      o.default.createElement("span",{className:"flex-1 min-w-0 truncate text-[14px]",style:{fontFamily:S,color:q.body}},fileName),
+      o.default.createElement("span",{className:"flex-1 min-w-0 text-[14px]",style:{fontFamily:S,color:q.body,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},fileName),
       o.default.createElement("button",{type:"button",onClick:onRemove,className:"shrink-0 active:opacity-60 w-8 h-8 flex items-center justify-center"},o.default.createElement(Trash2Ico,{size:18,color:q.tertiary}))
     );
   }
@@ -197,7 +199,7 @@ function UploadRow({label,fileName,onFile,onRemove,required:req}){
     )
   );
 }
-function s1({onDone:e,onBack:r}){
+function s1({onDone:e,onBack:r}){let E=o.default.createElement;
   let[phase,setPhase]=(0,o.useState)("business");
   let stepOf={business:1,owner:2,processing:3,docs:4,esign:5}[phase]||1;
 
@@ -312,178 +314,124 @@ function s1({onDone:e,onBack:r}){
   if(phase==="confirmation")return o.default.createElement(Ar,null,o.default.createElement("div",{className:"w-full flex flex-col",style:{minHeight:"calc(var(--rvh) * 100)",backgroundColor:q.bg}},o.default.createElement("div",{className:"flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center"},o.default.createElement("svg",{width:72,height:72,viewBox:"0 0 72 72",fill:"none"},o.default.createElement("circle",{cx:36,cy:36,r:36,fill:q.success}),o.default.createElement("path",{d:"M22 37 L31.5 46.5 L51 25",stroke:"#fff",strokeWidth:4,strokeLinecap:"round",strokeLinejoin:"round"})),o.default.createElement("div",{className:"flex flex-col gap-1"},o.default.createElement("div",{className:"text-[28px] leading-[34px] font-medium",style:{fontFamily:S,color:q.headings}},"Application complete!"),o.default.createElement("div",{className:"text-[16px]",style:{fontFamily:S,color:q.body}},"We’ve emailed you a copy of your signed application. You’ll receive a confirmation code once your account is verified."))),o.default.createElement("div",{className:"px-6 pt-3 pb-6"},o.default.createElement(ve,{onClick:e},"Continue"))));
 
   if(phase==="business")return o.default.createElement(Ar,null,o.default.createElement(H,{onBack:r,stickyHeader:!0,stickyLabel:"New processing account",footer:o.default.createElement(ve,{onClick:()=>setPhase("owner")},"Next: Owner information")},
-    o.default.createElement(StepEyebrow,{step:1,total:5,label:"Business information"}),
-    o.default.createElement("div",{className:"flex flex-col gap-4"},
-      o.default.createElement(ye,{label:"DBA name",required:!0,value:dba,onChange:setDba}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"Business email",required:!0,value:bEmail,onChange:setBEmail,type:"email"}),
-        o.default.createElement(ye,{half:!0,label:"Business phone",required:!0,value:bPhone,onChange:setBPhone,type:"tel"})
-      ),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"Website",value:website,onChange:setWebsite}),
-        o.default.createElement(ye,{half:!0,label:"Location fax",value:fax,onChange:setFax,type:"tel"})
-      ),
-      o.default.createElement(ye,{label:"Legal name",required:!0,value:legalName,onChange:setLegalName}),
-      o.default.createElement(SelectField,{label:"Tax filing name",value:taxSrc,onChange:v=>{setTaxSrc(v);if(v==="legal")setTaxFilingName(legalName);else if(v==="dba")setTaxFilingName(dba);else setTaxFilingName("")},options:[["legal","Same as legal name"],["dba","Same as DBA name"],["other","Enter a different name"]]}),
-      taxSrc==="other"&&o.default.createElement(ye,{label:"Different tax filing name",value:taxFilingName,onChange:setTaxFilingName}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"Federal Tax ID",required:!0,value:fedTaxId,onChange:setFedTaxId}),
-        o.default.createElement(SelectField,{half:!0,label:"Type of business",required:!0,value:bizType,onChange:setBizType,options:bizTypeOpts})
-      ),
-      o.default.createElement(DateField,{label:"Start date",required:!0,value:startDate,onSelect:setStartDate}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(SelectField,{half:!0,label:"Foreign entity",value:foreignEntity,onChange:setForeignEntity,options:yesNoOpts}),
-        o.default.createElement(SelectField,{half:!0,label:"State of formation",value:stateFormation,onChange:setStateFormation,options:USStates})
-      )
-    ),
-    o.default.createElement("div",{className:"flex flex-col gap-4"},
-      o.default.createElement(SectionLabel,null,"Primary business contact"),
-      o.default.createElement(ye,{label:"Contact name",required:!0,value:contactName,onChange:setContactName}),
-      o.default.createElement(ye,{label:"Contact title",value:contactTitle,onChange:setContactTitle}),
-      o.default.createElement(SelectField,{label:"Contact email and phone",value:contactSrc,onChange:v=>{setContactSrc(v);if(v==="business"){setContactEmail(bEmail);setContactPhone(bPhone)}},options:[["business","Same as business email and phone"],["other","Enter a different email and phone"]]}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"Contact email",required:!0,value:contactSrc==="business"?bEmail:contactEmail,onChange:setContactEmail,type:"email",disabled:contactSrc==="business"}),
-        o.default.createElement(ye,{half:!0,label:"Contact phone",required:!0,value:contactSrc==="business"?bPhone:contactPhone,onChange:setContactPhone,type:"tel",disabled:contactSrc==="business"})
-      ),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"Customer service email",value:csEmail,onChange:setCsEmail,type:"email"}),
-        o.default.createElement(ye,{half:!0,label:"Customer service phone",value:csPhone,onChange:setCsPhone,type:"tel"})
-      )
-    ),
-    o.default.createElement("div",{className:"flex flex-col gap-4"},
-      o.default.createElement(SectionLabel,null,"DBA address"),
-      o.default.createElement(ye,{label:"DBA address",required:!0,value:dbaAddress,onChange:setDbaAddress}),
-      o.default.createElement(ye,{label:"DBA city",required:!0,value:dbaCity,onChange:setDbaCity}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(SelectField,{half:!0,label:"DBA state",required:!0,value:dbaState,onChange:setDbaState,options:USStates}),
-        o.default.createElement(ye,{half:!0,label:"DBA zip",required:!0,value:dbaZip,onChange:setDbaZip})
-      ),
-      o.default.createElement(SelectField,{label:"DBA country",required:!0,value:dbaCountry,onChange:setDbaCountry,options:Countries}),
-      o.default.createElement("div",{style:{marginTop:"8px"}},o.default.createElement(SectionLabel,null,"Legal address")),
-      o.default.createElement(SelectField,{label:"Address",value:legalSrc,onChange:v=>{setLegalSrc(v);if(v==="dba"){setLegalAddress(dbaAddress);setLegalCity(dbaCity);setLegalState(dbaState);setLegalZip(dbaZip);setLegalCountry(dbaCountry)}},options:[["dba","Same as DBA address"],["other","Enter a different address"]]}),
-      o.default.createElement(ye,{label:"Legal street address",required:!0,value:legalSrc==="dba"?dbaAddress:legalAddress,onChange:setLegalAddress,disabled:legalSrc==="dba"}),
-      o.default.createElement(ye,{label:"Legal city",required:!0,value:legalSrc==="dba"?dbaCity:legalCity,onChange:setLegalCity,disabled:legalSrc==="dba"}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(SelectField,{half:!0,label:"Legal state",required:!0,value:legalSrc==="dba"?dbaState:legalState,onChange:setLegalState,options:USStates,disabled:legalSrc==="dba"}),
-        o.default.createElement(ye,{half:!0,label:"Legal zip",required:!0,value:legalSrc==="dba"?dbaZip:legalZip,onChange:setLegalZip,disabled:legalSrc==="dba"})
-      ),
-      o.default.createElement(SelectField,{label:"Legal country",required:!0,value:legalSrc==="dba"?dbaCountry:legalCountry,onChange:setLegalCountry,options:Countries,disabled:legalSrc==="dba"})
-    )
+    E(StepEyebrow,{step:1,total:5}),
+    E(FormCard,{title:"Business information"},
+      E(ye,{label:"DBA name",required:!0,value:dba,onChange:setDba}),
+      E(ye,{label:"Business email",required:!0,value:bEmail,onChange:setBEmail,type:"email"}),
+      E(ye,{label:"Business phone",required:!0,value:bPhone,onChange:setBPhone,type:"tel"}),
+      E(ye,{label:"Website",value:website,onChange:setWebsite}),
+      E(ye,{label:"Location fax",value:fax,onChange:setFax,type:"tel"}),
+      E(ye,{label:"Legal name",required:!0,value:legalName,onChange:setLegalName}),
+      E(SelectField,{label:"Tax filing name",value:taxSrc,onChange:v=>{setTaxSrc(v);if(v==="legal")setTaxFilingName(legalName);else if(v==="dba")setTaxFilingName(dba);else setTaxFilingName("")},options:[["legal","Same as legal name"],["dba","Same as DBA name"],["other","Enter a different name"]]}),
+      taxSrc==="other"&&E(ye,{label:"Different tax filing name",value:taxFilingName,onChange:setTaxFilingName}),
+      E("div",{className:"flex gap-3"},
+        E(ye,{half:!0,label:"Federal Tax ID",required:!0,value:fedTaxId,onChange:setFedTaxId}),
+        E(SelectField,{half:!0,label:"Type of business",required:!0,value:bizType,onChange:setBizType,options:bizTypeOpts})),
+      E(DateField,{label:"Start date",required:!0,value:startDate,onSelect:setStartDate}),
+      E("div",{className:"flex gap-3"},
+        E(SelectField,{half:!0,label:"Foreign entity",value:foreignEntity,onChange:setForeignEntity,options:yesNoOpts}),
+        E(SelectField,{half:!0,label:"State of formation",value:stateFormation,onChange:setStateFormation,options:USStates}))),
+    E(FormCard,{title:"Primary business contact"},
+      E(ye,{label:"Contact name",required:!0,value:contactName,onChange:setContactName}),
+      E(ye,{label:"Contact title",value:contactTitle,onChange:setContactTitle}),
+      E(ye,{label:"Customer service email",value:csEmail,onChange:setCsEmail,type:"email"}),
+      E(ye,{label:"Customer service phone",value:csPhone,onChange:setCsPhone,type:"tel"}),
+      E(SelectField,{label:"Contact email and phone",value:contactSrc,onChange:v=>{setContactSrc(v);if(v==="business"){setContactEmail(bEmail);setContactPhone(bPhone)}},options:[["business","Same as business email and phone"],["other","Enter a different email and phone"]]}),
+      E(ye,{label:"Contact email",required:!0,value:contactSrc==="business"?bEmail:contactEmail,onChange:setContactEmail,type:"email",disabled:contactSrc==="business"}),
+      E(ye,{label:"Contact phone",required:!0,value:contactSrc==="business"?bPhone:contactPhone,onChange:setContactPhone,type:"tel",disabled:contactSrc==="business"})),
+    E(FormCard,{title:"DBA address"},
+      E(ye,{label:"DBA address",required:!0,value:dbaAddress,onChange:setDbaAddress}),
+      E(ye,{label:"DBA city",required:!0,value:dbaCity,onChange:setDbaCity}),
+      E("div",{className:"flex gap-3"},
+        E(SelectField,{half:!0,label:"DBA state",required:!0,value:dbaState,onChange:setDbaState,options:USStates}),
+        E(ye,{half:!0,label:"DBA zip",required:!0,value:dbaZip,onChange:setDbaZip})),
+      E(SelectField,{label:"DBA country",required:!0,value:dbaCountry,onChange:setDbaCountry,options:Countries})),
+    E(FormCard,{title:"Legal address"},
+      E(SelectField,{label:"Address",value:legalSrc,onChange:v=>{setLegalSrc(v);if(v==="dba"){setLegalAddress(dbaAddress);setLegalCity(dbaCity);setLegalState(dbaState);setLegalZip(dbaZip);setLegalCountry(dbaCountry)}},options:[["dba","Same as DBA address"],["other","Enter a different address"]]}),
+      E(ye,{label:"Legal street address",required:!0,value:legalSrc==="dba"?dbaAddress:legalAddress,onChange:setLegalAddress,disabled:legalSrc==="dba"}),
+      E(ye,{label:"Legal city",required:!0,value:legalSrc==="dba"?dbaCity:legalCity,onChange:setLegalCity,disabled:legalSrc==="dba"}),
+      E("div",{className:"flex gap-3"},
+        E(SelectField,{half:!0,label:"Legal state",required:!0,value:legalSrc==="dba"?dbaState:legalState,onChange:setLegalState,options:USStates,disabled:legalSrc==="dba"}),
+        E(ye,{half:!0,label:"Legal zip",required:!0,value:legalSrc==="dba"?dbaZip:legalZip,onChange:setLegalZip,disabled:legalSrc==="dba"})),
+      E(SelectField,{label:"Legal country",required:!0,value:legalSrc==="dba"?dbaCountry:legalCountry,onChange:setLegalCountry,options:Countries,disabled:legalSrc==="dba"}))
   ));
 
   if(phase==="owner")return o.default.createElement(Ar,null,o.default.createElement(H,{onBack:()=>setPhase("business"),stickyHeader:!0,stickyLabel:"New processing account",footer:o.default.createElement(ve,{onClick:()=>setPhase("processing")},"Next: Processing & volume")},
-    o.default.createElement(StepEyebrow,{step:2,total:5,label:"Owner information"}),
-    o.default.createElement("div",{className:"flex flex-col gap-4"},
-      o.default.createElement(SectionLabel,null,"Primary owner"),
-      o.default.createElement(ye,{label:"Owner full name",required:!0,value:ownerFullName,onChange:setOwnerFullName}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"First name",value:ownerFirst,onChange:setOwnerFirst}),
-        o.default.createElement(ye,{half:!0,label:"Last name",value:ownerLast,onChange:setOwnerLast})
-      ),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"Email",value:ownerEmail,onChange:setOwnerEmail,type:"email"}),
-        o.default.createElement(ye,{half:!0,label:"Phone",required:!0,value:ownerPhone,onChange:setOwnerPhone,type:"tel"})
-      ),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"Social Security Number",required:!0,value:ownerSSN,onChange:setOwnerSSN,type:"password",showToggle:!0}),
-        o.default.createElement(DateField,{half:!0,label:"Date of birth",required:!0,value:ownerDOB,onSelect:setOwnerDOB})
-      ),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(SelectField,{half:!0,label:"Title",value:ownerTitle,onChange:setOwnerTitle,options:ownerTitleOpts}),
-        o.default.createElement(ye,{half:!0,label:"Ownership %",required:!0,value:ownershipPct,onChange:setOwnershipPct,type:"tel"})
-      ),
-      o.default.createElement(ye,{label:"Address",required:!0,value:ownerAddress,onChange:setOwnerAddress}),
-      o.default.createElement(ye,{label:"City",required:!0,value:ownerCity,onChange:setOwnerCity}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(SelectField,{half:!0,label:"State",required:!0,value:ownerState,onChange:setOwnerState,options:USStates}),
-        o.default.createElement(ye,{half:!0,label:"Zip",required:!0,value:ownerZip,onChange:setOwnerZip})
-      ),
-      o.default.createElement(SelectField,{label:"Country",required:!0,value:ownerCountry,onChange:setOwnerCountry,options:Countries})
-    ),
-    extraOwners.length>0&&o.default.createElement("div",{className:"flex flex-col gap-4"},
-      extraOwners.map((ow,idx)=>o.default.createElement("div",{key:ow.id,className:"flex flex-col gap-4"},
-        o.default.createElement("div",{className:"flex items-center justify-between"},
-          o.default.createElement(SectionLabel,null,`Additional owner ${idx+1}`),
-          o.default.createElement("button",{type:"button",onClick:()=>removeOwner(ow.id),className:"shrink-0 active:opacity-60 w-8 h-8 flex items-center justify-center -mt-2"},o.default.createElement(Trash2Ico,{size:18,color:q.tertiary}))
-        ),
-        o.default.createElement(ye,{label:"Full name",value:ow.name,onChange:v=>updateOwner(ow.id,"name",v)}),
-        o.default.createElement("div",{className:"flex gap-3"},
-          o.default.createElement(ye,{half:!0,label:"Title",value:ow.title,onChange:v=>updateOwner(ow.id,"title",v)}),
-          o.default.createElement(ye,{half:!0,label:"Ownership %",value:ow.pct,onChange:v=>updateOwner(ow.id,"pct",v),type:"tel"})
-        ),
-        o.default.createElement("div",{className:"flex gap-3"},
-          o.default.createElement(ye,{half:!0,label:"Email",value:ow.email,onChange:v=>updateOwner(ow.id,"email",v),type:"email"}),
-          o.default.createElement(ye,{half:!0,label:"Phone",value:ow.phone,onChange:v=>updateOwner(ow.id,"phone",v),type:"tel"})
-        )
-      ))
-    ),
+    E(StepEyebrow,{step:2,total:5}),
+    E(FormCard,{title:"Primary owner"},
+      E(ye,{label:"Owner full name",required:!0,value:ownerFullName,onChange:setOwnerFullName}),
+      E("div",{className:"flex gap-3"},
+        E(ye,{half:!0,label:"First name",value:ownerFirst,onChange:setOwnerFirst}),
+        E(ye,{half:!0,label:"Last name",value:ownerLast,onChange:setOwnerLast})),
+      E(ye,{label:"Email",value:ownerEmail,onChange:setOwnerEmail,type:"email"}),
+      E(ye,{label:"Phone",required:!0,value:ownerPhone,onChange:setOwnerPhone,type:"tel"}),
+      E(ye,{label:"Social Security Number",required:!0,value:ownerSSN,onChange:setOwnerSSN,type:"password",showToggle:!0}),
+      E(DateField,{label:"Date of birth",required:!0,value:ownerDOB,onSelect:setOwnerDOB}),
+      E("div",{className:"flex gap-3"},
+        E(SelectField,{half:!0,label:"Title",value:ownerTitle,onChange:setOwnerTitle,options:ownerTitleOpts}),
+        E(ye,{half:!0,label:"Ownership %",required:!0,value:ownershipPct,onChange:setOwnershipPct,type:"tel"}))),
+    E(FormCard,{title:"Owner address"},
+      E(ye,{label:"Address",required:!0,value:ownerAddress,onChange:setOwnerAddress}),
+      E(ye,{label:"City",required:!0,value:ownerCity,onChange:setOwnerCity}),
+      E("div",{className:"flex gap-3"},
+        E(SelectField,{half:!0,label:"State",required:!0,value:ownerState,onChange:setOwnerState,options:USStates}),
+        E(ye,{half:!0,label:"Zip",required:!0,value:ownerZip,onChange:setOwnerZip})),
+      E(SelectField,{label:"Country",required:!0,value:ownerCountry,onChange:setOwnerCountry,options:Countries})),
+    extraOwners.map((ow,idx)=>E(FormCard,{key:ow.id,title:`Additional owner ${idx+1}`,action:E("button",{type:"button","aria-label":"Remove owner",onClick:()=>removeOwner(ow.id),className:"shrink-0 active:opacity-60 w-8 h-8 flex items-center justify-center",style:{margin:"-8px -8px -8px 0"}},E(Trash2Ico,{size:18,color:q.tertiary}))},
+      E(ye,{label:"Full name",value:ow.name,onChange:v=>updateOwner(ow.id,"name",v)}),
+      E("div",{className:"flex gap-3"},
+        E(ye,{half:!0,label:"Title",value:ow.title,onChange:v=>updateOwner(ow.id,"title",v)}),
+        E(ye,{half:!0,label:"Ownership %",value:ow.pct,onChange:v=>updateOwner(ow.id,"pct",v),type:"tel"})),
+      E(ye,{label:"Email",value:ow.email,onChange:v=>updateOwner(ow.id,"email",v),type:"email"}),
+      E(ye,{label:"Phone",value:ow.phone,onChange:v=>updateOwner(ow.id,"phone",v),type:"tel"}))),
     o.default.createElement("button",{type:"button",onClick:addOwner,className:"w-full flex items-center justify-center gap-2 rounded-[10px] active:opacity-70",style:{height:"52px",border:`1px solid ${q.action}`,fontFamily:S,color:q.action,fontSize:"14px",fontWeight:600}},o.default.createElement(PlusIco,{size:16,color:q.action}),"Add additional owner")
   ));
 
   if(phase==="processing")return o.default.createElement(Ar,null,o.default.createElement(H,{onBack:()=>setPhase("owner"),stickyHeader:!0,stickyLabel:"New processing account",footer:o.default.createElement(ve,{onClick:()=>setPhase("docs")},"Next: Supporting documentation")},
-    o.default.createElement(StepEyebrow,{step:3,total:5,label:"Processing & volume"}),
-    o.default.createElement("div",{className:"flex flex-col gap-4"},
-      o.default.createElement(SectionLabel,null,"Annual sales volume"),
-      o.default.createElement(MoneyField,{label:"Gross annual sales",required:!0,value:grossAnnualSales,onChange:setGrossAnnualSales}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(MoneyField,{half:!0,label:"Avg annual Visa/MC volume",required:!0,value:avgVisaMcVol,onChange:setAvgVisaMcVol}),
-        o.default.createElement(MoneyField,{half:!0,label:"Avg Visa/MC ticket",required:!0,value:avgVisaMcTicket,onChange:setAvgVisaMcTicket})
-      ),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(MoneyField,{half:!0,label:"Avg Discover annual volume",required:!0,value:avgDiscoverVol,onChange:setAvgDiscoverVol}),
-        o.default.createElement(MoneyField,{half:!0,label:"Avg Amex ticket",required:!0,value:avgAmexTicket,onChange:setAvgAmexTicket})
-      ),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(MoneyField,{half:!0,label:"Avg Amex annual volume",required:!0,value:avgAmexVol,onChange:setAvgAmexVol}),
-        o.default.createElement(MoneyField,{half:!0,label:"Highest ticket amount",required:!0,value:highestTicket,onChange:setHighestTicket})
-      )
-    ),
-    o.default.createElement("div",{className:"flex flex-col gap-4"},
-      o.default.createElement(SectionLabel,null,"Banking information"),
-      o.default.createElement(ye,{label:"Bank name",required:!0,value:bankName,onChange:setBankName}),
-      o.default.createElement("div",{className:"flex gap-3"},
-        o.default.createElement(ye,{half:!0,label:"ABA routing number",required:!0,value:routingNumber,onChange:setRoutingNumber,type:"tel"}),
-        o.default.createElement(ye,{half:!0,label:"Deposit account number",required:!0,value:accountNumber,onChange:setAccountNumber,type:"tel"})
-      ),
-      o.default.createElement(SelectField,{label:"Account type",required:!0,value:accountType,onChange:setAccountType,options:accountTypeOpts}),
-      o.default.createElement("div",{className:"rounded-[10px] px-4 py-3 text-center text-[13px]",style:{backgroundColor:"#fdf6e3",border:"1px dashed #e6c667",fontFamily:S,color:q.body,fontWeight:600}},"Please provide a copy of a voided check or bank letter."),
-      o.default.createElement(UploadRow,{label:"Voided check",required:!0,fileName:voidedCheck,onFile:setVoidedCheck,onRemove:()=>setVoidedCheck("")})
-    )
+    E(StepEyebrow,{step:3,total:5}),
+    E(FormCard,{title:"Annual sales volume"},
+      E(MoneyField,{label:"Gross annual sales",required:!0,value:grossAnnualSales,onChange:setGrossAnnualSales}),
+      E(MoneyField,{label:"Avg annual Visa/MC volume",required:!0,value:avgVisaMcVol,onChange:setAvgVisaMcVol}),
+      E(MoneyField,{label:"Avg Visa/MC ticket",required:!0,value:avgVisaMcTicket,onChange:setAvgVisaMcTicket}),
+      E(MoneyField,{label:"Avg Discover annual volume",required:!0,value:avgDiscoverVol,onChange:setAvgDiscoverVol}),
+      E(MoneyField,{label:"Avg Amex ticket",required:!0,value:avgAmexTicket,onChange:setAvgAmexTicket}),
+      E(MoneyField,{label:"Avg Amex annual volume",required:!0,value:avgAmexVol,onChange:setAvgAmexVol}),
+      E(MoneyField,{label:"Highest ticket amount",required:!0,value:highestTicket,onChange:setHighestTicket})),
+    E(FormCard,{title:"Banking information"},
+      E(ye,{label:"Bank name",required:!0,value:bankName,onChange:setBankName}),
+      E(ye,{label:"ABA routing number",required:!0,value:routingNumber,onChange:setRoutingNumber,type:"tel"}),
+      E(ye,{label:"Deposit account number",required:!0,value:accountNumber,onChange:setAccountNumber,type:"tel"}),
+      E(SelectField,{label:"Account type",required:!0,value:accountType,onChange:setAccountType,options:accountTypeOpts}),
+      E("div",{className:"px-4 py-3 text-center",style:{borderRadius:"8px",backgroundColor:"#fdf6e3",border:"1px dashed #e6c667",fontFamily:S,fontSize:"14px",lineHeight:"20px",color:q.body,fontWeight:600}},"Please provide a copy of a voided check or bank letter."),
+      E(UploadRow,{label:"Voided check",required:!0,fileName:voidedCheck,onFile:setVoidedCheck,onRemove:()=>setVoidedCheck("")}))
   ));
 
   if(phase==="docs"){
     let docs=[["ein","EIN / Tax ID"],["articles","Articles of Incorporation"],["fictitious","Fictitious Name Certificate"],["taxExempt","Tax Exemption Form"],["form501c","Form 501c"],["ebtFns","EBT State FNS Number"],["other","Other"]];
     return o.default.createElement(Ar,null,o.default.createElement(H,{onBack:()=>setPhase("processing"),stickyHeader:!0,stickyLabel:"New processing account",footer:o.default.createElement(ve,{onClick:()=>setPhase("esign")},"Next: Review & sign")},
-      o.default.createElement(StepEyebrow,{step:4,total:5,label:"Supporting documentation"}),
-      o.default.createElement("div",{className:"flex flex-col gap-4"},
-        o.default.createElement(SectionLabel,null,"Additional documentation"),
-        docs.map(([key,label])=>o.default.createElement(UploadRow,{key:key,label:label,fileName:uploadFields[key][0],onFile:uploadFields[key][1],onRemove:()=>uploadFields[key][1]("")}))
-      )
+      E(StepEyebrow,{step:4,total:5}),
+      E(FormCard,{title:"Additional documentation"},
+        docs.map(([key,label])=>E(UploadRow,{key:key,label:label,fileName:uploadFields[key][0],onFile:uploadFields[key][1],onRemove:()=>uploadFields[key][1]("")})))
     ));
   }
 
   if(phase==="esign"){
     let summaryRows=[["Business (DBA)",dba],["Legal name",legalName],["Owner",ownerFullName],["Ownership",ownershipPct+"%"],["Gross annual sales","$"+(grossAnnualSales||"0")]];
     return o.default.createElement(Ar,null,o.default.createElement(H,{onBack:()=>setPhase("docs"),stickyHeader:!0,stickyLabel:"New processing account",footer:o.default.createElement(ve,{onClick:()=>setPhase("loading"),disabled:!canSign},"Sign & submit application")},
-      o.default.createElement(StepEyebrow,{step:5,total:5,label:"Review & sign"}),
-      o.default.createElement("div",{className:"flex flex-col gap-3 rounded-[14px] p-4",style:{border:`1px solid ${q.borderDefault}`,backgroundColor:q.page}},
-        summaryRows.map(([label,val])=>o.default.createElement("div",{key:label,className:"flex items-center justify-between gap-3"},
-          o.default.createElement("span",{className:"text-[13px]",style:{fontFamily:S,color:q.tertiary}},label),
-          o.default.createElement("span",{className:"text-[14px] font-semibold text-right",style:{fontFamily:S,color:q.headings}},val)
-        ))
-      ),
-      o.default.createElement("p",{className:"text-[14px] leading-[20px]",style:{fontFamily:S,color:q.body}},"By signing below, you agree to the terms of the ",o.default.createElement("span",{style:{fontWeight:700}},"Linga Payments Merchant Processing Application and Agreement"),"."),
-      o.default.createElement("div",{className:"flex flex-col gap-3"},
-        o.default.createElement("div",{className:"rounded-[10px] px-4 flex items-end justify-between",style:{height:"88px",border:`1px solid ${q.borderInput}`,backgroundColor:q.page}},
-          o.default.createElement("span",{style:{fontFamily:"'Caveat', cursive",fontSize:"34px",color:signatureName?q.headings:q.disabled,lineHeight:1}},signatureName||"Your signature"),
-          o.default.createElement("span",{className:"text-[12px] pb-1",style:{fontFamily:S,color:q.tertiary}},new Date().toLocaleDateString())
-        ),
-        o.default.createElement(ye,{label:"Type your full legal name to sign",required:!0,value:signatureName,onChange:setSignatureName})
-      ),
-      o.default.createElement("button",{type:"button",onClick:()=>setAgreeTerms(v=>!v),className:"flex items-start gap-3 text-left active:opacity-70"},
-        o.default.createElement("div",{className:"shrink-0 rounded-[6px] flex items-center justify-center",style:{width:"22px",height:"22px",marginTop:"1px",border:`2px solid ${agreeTerms?q.action:q.borderInput}`,backgroundColor:agreeTerms?q.action:"transparent"}},agreeTerms&&o.default.createElement("svg",{width:12,height:10,viewBox:"0 0 12 10",fill:"none"},o.default.createElement("path",{d:"M1 5 L4.5 8.5 L11 1",stroke:"#fff",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}))),
-        o.default.createElement("span",{className:"text-[14px] leading-[19px]",style:{fontFamily:S,color:q.body}},"I’ve reviewed and agree to the Linga Payments Merchant Processing Application and Agreement.")
-      )
+      E(StepEyebrow,{step:5,total:5}),
+      E(FormCard,{title:"Application summary"},
+        summaryRows.map(([label,val])=>E("div",{key:label,className:"flex items-center justify-between gap-3"},
+          E("span",{style:{fontFamily:S,fontSize:"14px",lineHeight:"17px",color:q.tertiary}},label),
+          E("span",{className:"text-right",style:{fontFamily:S,fontSize:"14px",lineHeight:"17px",fontWeight:600,color:q.headings}},val)))),
+      E(FormCard,{title:"Signature"},
+        E("p",{className:"text-[14px] leading-[20px]",style:{fontFamily:S,color:q.body,margin:0}},"By signing below, you agree to the terms of the ",E("span",{style:{fontWeight:700}},"Linga Payments Merchant Processing Application and Agreement"),"."),
+        E("div",{className:"px-4 flex items-end justify-between",style:{height:"88px",borderRadius:"8px",border:"1px solid #adaaaa",backgroundColor:"#fff"}},
+          E("span",{style:{fontFamily:"'Caveat', cursive",fontSize:"34px",color:signatureName?q.headings:q.disabled,lineHeight:1}},signatureName||"Your signature"),
+          E("span",{className:"text-[12px] pb-1",style:{fontFamily:S,color:q.tertiary}},new Date().toLocaleDateString())),
+        E(ye,{label:"Type your full legal name to sign",required:!0,value:signatureName,onChange:setSignatureName}),
+        E("button",{type:"button",onClick:()=>setAgreeTerms(v=>!v),className:"flex items-start gap-3 text-left active:opacity-70"},
+          E("div",{className:"shrink-0 rounded-[6px] flex items-center justify-center",style:{width:"22px",height:"22px",marginTop:"1px",border:`2px solid ${agreeTerms?q.action:q.borderInput}`,backgroundColor:agreeTerms?q.action:"transparent"}},agreeTerms&&E("svg",{width:12,height:10,viewBox:"0 0 12 10",fill:"none"},E("path",{d:"M1 5 L4.5 8.5 L11 1",stroke:"#fff",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}))),
+          E("span",{className:"text-[14px] leading-[19px]",style:{fontFamily:S,color:q.body}},"I’ve reviewed and agree to the Linga Payments Merchant Processing Application and Agreement.")))
     ));
   }
 }
