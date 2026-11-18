@@ -174,8 +174,8 @@ function StepEyebrow({step,total,label}){
     o.default.createElement("span",{style:{fontFamily:S,fontSize:"16px",lineHeight:"20px",fontWeight:600,color:q.action,display:"block"}},label?`Step ${step} of ${total} \u2014 ${label}`:`Step ${step} of ${total}`)
   );
 }
-function FormCard({title,action,children}){
-  return o.default.createElement("div",{"data-form-card":title,className:"w-full bg-white flex flex-col",style:{borderRadius:"16px",padding:"20px",gap:"16px"}},
+function FormCard({title,action,children,surface}){
+  return o.default.createElement("div",{"data-form-card":title,className:"w-full flex flex-col",style:{backgroundColor:surface||"#fff",borderRadius:"16px",padding:"20px",gap:"16px"}},
     o.default.createElement("div",{className:"flex items-center justify-between",style:{gap:"8px",minHeight:"17px"}},o.default.createElement("span",{style:{fontFamily:S,fontSize:"14px",lineHeight:"17px",fontWeight:700,color:q.body}},title),action||null),
     children);
 }
@@ -419,7 +419,7 @@ function s1({onDone:e,onBack:r}){let E=o.default.createElement;
     let summaryRows=[["Business (DBA)",dba],["Legal name",legalName],["Owner",ownerFullName],["Ownership",ownershipPct+"%"],["Gross annual sales","$"+(grossAnnualSales||"0")]];
     return o.default.createElement(Ar,null,o.default.createElement(H,{onBack:()=>setPhase("docs"),stickyHeader:!0,stickyLabel:"New processing account",footer:o.default.createElement(ve,{onClick:()=>setPhase("loading"),disabled:!canSign},"Sign & submit application")},
       E(StepEyebrow,{step:5,total:5,label:"Review & sign"}),
-      E(FormCard,{title:"Application summary"},
+      E(FormCard,{title:"Application summary",surface:"#f2f0f0"},
         summaryRows.map(([label,val])=>E("div",{key:label,className:"flex items-center justify-between gap-3"},
           E("span",{style:{fontFamily:S,fontSize:"14px",lineHeight:"17px",color:q.tertiary}},label),
           E("span",{className:"text-right",style:{fontFamily:S,fontSize:"14px",lineHeight:"17px",fontWeight:600,color:q.headings}},val)))),
